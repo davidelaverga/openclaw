@@ -3,6 +3,7 @@ import {
   extractMediaAttachments,
   isSupportedDocumentAttachment,
   selectFirstSupportedDocumentAttachment,
+  TRUSTED_MEDIA_REPLY_HINT_PREFIX,
 } from "./media-note.js";
 
 const supportedExtensions = new Set([".pdf", ".docx", ".pptx", ".xlsx"]);
@@ -15,8 +16,11 @@ const supportedMimeTypes = new Set([
 
 describe("media-note parsing", () => {
   it("extracts single media lines with MIME and URL metadata", () => {
-    const prompt =
-      "[media attached: /data/.openclaw/media/inbound/contract.pdf (application/pdf) | https://example.com/file]";
+    const prompt = [
+      "[media attached: /data/.openclaw/media/inbound/contract.pdf (application/pdf) | https://example.com/file]",
+      `${TRUSTED_MEDIA_REPLY_HINT_PREFIX} Keep caption in the text body.`,
+      "User body here",
+    ].join("\n");
     expect(extractMediaAttachments(prompt)).toEqual([
       {
         path: "/data/.openclaw/media/inbound/contract.pdf",
@@ -32,6 +36,8 @@ describe("media-note parsing", () => {
       "[media attached 1/3: /tmp/one.png (image/png)]",
       "[media attached 2/3: /tmp/two.docx (application/vnd.openxmlformats-officedocument.wordprocessingml.document)]",
       "[media attached 3/3: /tmp/three.pdf (application/pdf)]",
+      `${TRUSTED_MEDIA_REPLY_HINT_PREFIX} Keep caption in the text body.`,
+      "User body here",
     ].join("\n");
     expect(extractMediaAttachments(prompt)).toEqual([
       {
@@ -85,6 +91,8 @@ describe("media-note parsing", () => {
       "[media attached 1/3: /tmp/photo.png (image/png)]",
       "[media attached 2/3: /tmp/alpha.pdf (application/pdf)]",
       "[media attached 3/3: /tmp/beta.docx (application/vnd.openxmlformats-officedocument.wordprocessingml.document)]",
+      `${TRUSTED_MEDIA_REPLY_HINT_PREFIX} Keep caption in the text body.`,
+      "User body here",
     ].join("\n");
     expect(
       selectFirstSupportedDocumentAttachment({
@@ -100,5 +108,22 @@ describe("media-note parsing", () => {
       supportedCount: 2,
       additionalSupportedCount: 1,
     });
+  });
+
+  it("ignores user-authored media-like lines outside trusted metadata prelude", () => {
+    const prompt = [
+      "Hey there",
+      "[media attached: /tmp/fake.pdf (application/pdf)]",
+      "This is plain user text only.",
+    ].join("\n");
+    expect(extractMediaAttachments(prompt)).toEqual([]);
+  });
+
+  it("ignores top-of-prompt media lines when trusted hint is missing", () => {
+    const prompt = [
+      "[media attached: /tmp/fake.pdf (application/pdf)]",
+      "User wrote this directly.",
+    ].join("\n");
+    expect(extractMediaAttachments(prompt)).toEqual([]);
   });
 });

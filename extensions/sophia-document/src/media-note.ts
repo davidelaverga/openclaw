@@ -4,6 +4,8 @@ import { normalizeMimeType } from "./config.js";
 const SINGLE_MEDIA_LINE_RE = /^\[media attached: (.+)\]$/;
 const INDEXED_MEDIA_LINE_RE = /^\[media attached \d+\/\d+: (.+)\]$/;
 const MEDIA_COUNT_RE = /^\d+\s+files?$/i;
+export const TRUSTED_MEDIA_REPLY_HINT_PREFIX =
+  "To send an image back, prefer the message tool (media/path/filePath).";
 
 export type MediaAttachment = {
   path: string;
@@ -55,13 +57,42 @@ function parseAttachmentPayload(payload: string): MediaAttachment | null {
     ...(url ? { url } : {}),
   };
 }
+function isMediaNoteLine(line: string): boolean {
+  return SINGLE_MEDIA_LINE_RE.test(line) || INDEXED_MEDIA_LINE_RE.test(line);
+}
+
+function extractTrustedMediaNoteLines(prompt: string): string[] {
+  const lines = prompt.split(/\r?\n/);
+  const mediaNoteLines: string[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index]?.trim() ?? "";
+    if (!line || !isMediaNoteLine(line)) {
+      break;
+    }
+    mediaNoteLines.push(line);
+    index += 1;
+  }
+  if (mediaNoteLines.length === 0) {
+    return [];
+  }
+  const nextLine = lines[index]?.trim() ?? "";
+  if (!nextLine.startsWith(TRUSTED_MEDIA_REPLY_HINT_PREFIX)) {
+    return [];
+  }
+  return mediaNoteLines;
+}
 
 export function extractMediaAttachments(prompt: string): MediaAttachment[] {
   if (!prompt.trim()) {
     return [];
   }
+  const trustedMediaNoteLines = extractTrustedMediaNoteLines(prompt);
+  if (trustedMediaNoteLines.length === 0) {
+    return [];
+  }
   const attachments: MediaAttachment[] = [];
-  for (const line of prompt.split(/\r?\n/)) {
+  for (const line of trustedMediaNoteLines) {
     const match = line.match(SINGLE_MEDIA_LINE_RE) ?? line.match(INDEXED_MEDIA_LINE_RE);
     if (!match?.[1]) {
       continue;
