@@ -3,7 +3,8 @@
     "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
     "OPENAI_API_KEY": "${OPENAI_API_KEY}",
     "DEEPGRAM_API_KEY": "${DEEPGRAM_API_KEY}",
-    "ELEVENLABS_API_KEY": "${ELEVENLABS_API_KEY}"
+    "ELEVENLABS_API_KEY": "${ELEVENLABS_API_KEY}",
+    "LLAMA_CLOUD_API_KEY": "${LLAMA_CLOUD_API_KEY}"
   },
   "agents": {
     "defaults": {
@@ -114,6 +115,16 @@
           "maxCharsPerField": 8000,
           "maxHistoryMessages": 12,
           "toolNames": ["memory_search", "memory_get", "web_search", "web_fetch"]
+        }
+      },
+      "sophia-document": {
+        "enabled": true,
+        "config": {
+          "tier": "cost_effective",
+          "version": "latest",
+          "pollIntervalMs": 2000,
+          "pollTimeoutMs": 45000,
+          "maxChars": 48000
         }
       }
     }

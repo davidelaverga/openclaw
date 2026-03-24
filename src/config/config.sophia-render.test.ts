@@ -13,6 +13,7 @@ describe("sophia/openclaw.render.json", () => {
       OPENAI_API_KEY: "${OPENAI_API_KEY}",
       DEEPGRAM_API_KEY: "${DEEPGRAM_API_KEY}",
       ELEVENLABS_API_KEY: "${ELEVENLABS_API_KEY}",
+      LLAMA_CLOUD_API_KEY: "${LLAMA_CLOUD_API_KEY}",
     });
     expect(raw.tools).toMatchObject({
       media: {
@@ -53,6 +54,23 @@ describe("sophia/openclaw.render.json", () => {
           emoji: "💙",
           direct: true,
           group: "mentions",
+        },
+      },
+    });
+    expect(raw.plugins).toMatchObject({
+      entries: {
+        "prompt-observer": {
+          enabled: true,
+        },
+        "sophia-document": {
+          enabled: true,
+          config: {
+            tier: "cost_effective",
+            version: "latest",
+            pollIntervalMs: 2000,
+            pollTimeoutMs: 45000,
+            maxChars: 48000,
+          },
         },
       },
     });
