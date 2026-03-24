@@ -4,6 +4,7 @@ export const DEFAULT_LLAMA_VERSION = "latest";
 export const DEFAULT_POLL_INTERVAL_MS = 2_000;
 export const DEFAULT_POLL_TIMEOUT_MS = 45_000;
 export const DEFAULT_MAX_CHARS = 48_000;
+export const DEFAULT_FORCE_LLAMA_PARSE_PDF = false;
 
 const MIN_POLL_INTERVAL_MS = 250;
 const MAX_POLL_INTERVAL_MS = 10_000;
@@ -12,14 +13,11 @@ const MAX_POLL_TIMEOUT_MS = 180_000;
 const MIN_MAX_CHARS = 2_000;
 const MAX_MAX_CHARS = 200_000;
 
+export const DEFAULT_ALWAYS_PARSE_DOCUMENT_EXTENSIONS = new Set([".ppt", ".pptx", ".xls", ".xlsx"]);
+export const DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS = new Set([".pdf", ".doc", ".docx"]);
 export const DEFAULT_SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
-  ".pdf",
-  ".doc",
-  ".docx",
-  ".ppt",
-  ".pptx",
-  ".xls",
-  ".xlsx",
+  ...DEFAULT_ALWAYS_PARSE_DOCUMENT_EXTENSIONS,
+  ...DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS,
 ]);
 
 export const DEFAULT_SUPPORTED_DOCUMENT_MIME_TYPES = new Set([
@@ -39,6 +37,9 @@ export type SophiaDocumentConfig = {
   pollIntervalMs: number;
   pollTimeoutMs: number;
   maxChars: number;
+  forceLlamaParsePdf: boolean;
+  alwaysParseExtensions: Set<string>;
+  fallbackParseExtensions: Set<string>;
   supportedExtensions: Set<string>;
   supportedMimeTypes: Set<string>;
 };
@@ -50,6 +51,9 @@ type RawSophiaDocumentConfig = {
   pollIntervalMs?: unknown;
   pollTimeoutMs?: unknown;
   maxChars?: unknown;
+  forceLlamaParsePdf?: unknown;
+  alwaysParseExtensions?: unknown;
+  fallbackParseExtensions?: unknown;
   supportedExtensions?: unknown;
   supportedMimeTypes?: unknown;
 };
@@ -126,6 +130,25 @@ export function resolveSophiaDocumentConfig(raw: unknown): SophiaDocumentConfig 
       MAX_POLL_TIMEOUT_MS,
     ),
   );
+  const forceLlamaParsePdf = config.forceLlamaParsePdf === true;
+  const alwaysParseExtensions = normalizeStringSet(
+    config.alwaysParseExtensions,
+    normalizeExtension,
+    DEFAULT_ALWAYS_PARSE_DOCUMENT_EXTENSIONS,
+  );
+  const fallbackParseExtensions = normalizeStringSet(
+    config.fallbackParseExtensions,
+    normalizeExtension,
+    DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS,
+  );
+  if (forceLlamaParsePdf) {
+    alwaysParseExtensions.add(".pdf");
+    fallbackParseExtensions.delete(".pdf");
+  }
+  const defaultSupportedExtensions = new Set([
+    ...alwaysParseExtensions,
+    ...fallbackParseExtensions,
+  ]);
   return {
     baseUrl: normalizeBaseUrl(config.baseUrl),
     tier: normalizeTier(config.tier),
@@ -133,10 +156,13 @@ export function resolveSophiaDocumentConfig(raw: unknown): SophiaDocumentConfig 
     pollIntervalMs,
     pollTimeoutMs,
     maxChars: clampInteger(config.maxChars, DEFAULT_MAX_CHARS, MIN_MAX_CHARS, MAX_MAX_CHARS),
+    forceLlamaParsePdf,
+    alwaysParseExtensions,
+    fallbackParseExtensions,
     supportedExtensions: normalizeStringSet(
       config.supportedExtensions,
       normalizeExtension,
-      DEFAULT_SUPPORTED_DOCUMENT_EXTENSIONS,
+      defaultSupportedExtensions,
     ),
     supportedMimeTypes: normalizeStringSet(
       config.supportedMimeTypes,

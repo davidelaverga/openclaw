@@ -1,7 +1,7 @@
 {
   "id": "sophia-document",
   "name": "Sophia Document",
-  "description": "Parses inbound document attachments with LlamaParse and appends bounded markdown context before prompt build.",
+  "description": "Routes inbound document attachments between native prompt context and LlamaParse before prompt build.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -36,6 +36,20 @@
         "minimum": 2000,
         "maximum": 200000,
         "default": 48000
+      },
+      "forceLlamaParsePdf": {
+        "type": "boolean",
+        "default": false
+      },
+      "alwaysParseExtensions": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": [".ppt", ".pptx", ".xls", ".xlsx"]
+      },
+      "fallbackParseExtensions": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": [".pdf", ".doc", ".docx"]
       },
       "supportedExtensions": {
         "type": "array",
@@ -72,9 +86,21 @@
       "label": "Max Injected Characters",
       "help": "Upper bound for markdown injected into system context."
     },
+    "forceLlamaParsePdf": {
+      "label": "Force LlamaParse for PDFs",
+      "help": "Override the default PDF fallback behavior and always parse PDFs with LlamaParse."
+    },
+    "alwaysParseExtensions": {
+      "label": "Always Parse Extensions",
+      "help": "Extensions that should always route through LlamaParse even if OpenClaw extracted text already exists."
+    },
+    "fallbackParseExtensions": {
+      "label": "Fallback Parse Extensions",
+      "help": "Extensions that should only route through LlamaParse when the prompt lacks a usable matching <file> block."
+    },
     "supportedExtensions": {
       "label": "Supported Extensions",
-      "help": "Optional extension allowlist override (e.g. .pdf, .docx)."
+      "help": "Optional detection allowlist override. If unset, uses the union of always/fallback parse extensions."
     },
     "supportedMimeTypes": {
       "label": "Supported MIME Types",
