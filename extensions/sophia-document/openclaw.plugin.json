@@ -1,0 +1,84 @@
+{
+  "id": "sophia-document",
+  "name": "Sophia Document",
+  "description": "Parses inbound document attachments with LlamaParse and appends bounded markdown context before prompt build.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "default": "https://api.cloud.llamaindex.ai"
+      },
+      "tier": {
+        "type": "string",
+        "enum": ["fast", "cost_effective", "agentic", "agentic_plus"],
+        "default": "cost_effective"
+      },
+      "version": {
+        "type": "string",
+        "default": "latest"
+      },
+      "pollIntervalMs": {
+        "type": "integer",
+        "minimum": 250,
+        "maximum": 10000,
+        "default": 2000
+      },
+      "pollTimeoutMs": {
+        "type": "integer",
+        "minimum": 5000,
+        "maximum": 180000,
+        "default": 45000
+      },
+      "maxChars": {
+        "type": "integer",
+        "minimum": 2000,
+        "maximum": 200000,
+        "default": 48000
+      },
+      "supportedExtensions": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "supportedMimeTypes": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  },
+  "uiHints": {
+    "baseUrl": {
+      "label": "LlamaParse Base URL",
+      "help": "Defaults to the US SaaS endpoint. Override for regional endpoints if needed."
+    },
+    "tier": {
+      "label": "LlamaParse Tier",
+      "help": "Parsing tier used for inbound documents."
+    },
+    "version": {
+      "label": "Parse Version",
+      "help": "Use \"latest\" unless you need to pin behavior."
+    },
+    "pollIntervalMs": {
+      "label": "Poll Interval (ms)",
+      "help": "How often parse job status is polled."
+    },
+    "pollTimeoutMs": {
+      "label": "Poll Timeout (ms)",
+      "help": "Maximum polling duration before giving up."
+    },
+    "maxChars": {
+      "label": "Max Injected Characters",
+      "help": "Upper bound for markdown injected into system context."
+    },
+    "supportedExtensions": {
+      "label": "Supported Extensions",
+      "help": "Optional extension allowlist override (e.g. .pdf, .docx)."
+    },
+    "supportedMimeTypes": {
+      "label": "Supported MIME Types",
+      "help": "Optional MIME allowlist override."
+    }
+  }
+}
