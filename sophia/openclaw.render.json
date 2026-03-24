@@ -31,10 +31,13 @@
     ]
   },
   "tools": {
-    "deny": ["tts"],
     "media": {
       "audio": {
         "enabled": true,
+        "scope": {
+          "default": "allow",
+          "rules": [{ "action": "deny", "match": { "self": true } }]
+        },
         "language": "multi",
         "providerOptions": {
           "deepgram": {
