@@ -36,7 +36,7 @@
         "enabled": true,
         "scope": {
           "default": "allow",
-          "rules": [{ "action": "deny", "match": { "self": true } }]
+          "rules": [{ "action": "deny", "match": { "channel": "whatsapp", "chatType": "direct" } }]
         },
         "language": "multi",
         "providerOptions": {
