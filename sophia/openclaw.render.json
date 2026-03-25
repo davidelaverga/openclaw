@@ -150,11 +150,11 @@
         "group": "mentions"
       }
     }
+  },
+  "browser": {
+    "enabled": true,
+    "defaultProfile": "openclaw",
+    "headless": true,
+    "noSandbox": true
   }
-}
-"browser": {
-  "enabled": true,
-  "defaultProfile": "openclaw",
-  "headless": true,
-  "noSandbox": true
 }
