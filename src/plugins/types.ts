@@ -1469,12 +1469,21 @@ export type PluginHookBeforeModelResolveResult = {
   /** Override the provider for this agent run. E.g. "ollama" */
   providerOverride?: string;
 };
+export type TrustedPromptFileBlockState = "degraded" | "usable";
+
+export type TrustedPromptFileBlock = {
+  fileName: string;
+  mimeType?: string;
+  state: TrustedPromptFileBlockState;
+};
 
 // before_prompt_build hook
 export type PluginHookBeforePromptBuildEvent = {
   prompt: string;
   /** Session messages prepared for this run. */
   messages: unknown[];
+  /** Trusted <file> blocks produced by OpenClaw media extraction for this turn. */
+  trustedPromptFileBlocks?: TrustedPromptFileBlock[];
 };
 
 export type PluginHookBeforePromptBuildResult = {
@@ -1513,6 +1522,8 @@ export type PluginHookBeforeAgentStartEvent = {
   prompt: string;
   /** Optional because legacy hook can run in pre-session phase. */
   messages?: unknown[];
+  /** Trusted <file> blocks produced by OpenClaw media extraction for this turn. */
+  trustedPromptFileBlocks?: TrustedPromptFileBlock[];
 };
 
 export type PluginHookBeforeAgentStartResult = PluginHookBeforePromptBuildResult &

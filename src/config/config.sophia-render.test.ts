@@ -70,6 +70,8 @@ describe("sophia/openclaw.render.json", () => {
             pollIntervalMs: 2000,
             pollTimeoutMs: 45000,
             maxChars: 48000,
+            alwaysParseExtensions: [".ppt", ".pptx", ".xls", ".xlsx"],
+            fallbackParseExtensions: [".pdf", ".doc", ".docx"],
           },
         },
       },
