@@ -31,6 +31,12 @@
       }
     ]
   },
+  "browser": {
+    "enabled": true,
+    "defaultProfile": "openclaw",
+    "headless": true,
+    "noSandbox": true
+  },
   "tools": {
     "media": {
       "audio": {

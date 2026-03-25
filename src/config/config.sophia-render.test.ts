@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { validateConfigObject } from "./config.js";
 
 describe("sophia/openclaw.render.json", () => {
-  it("keeps the translated voice-layer config valid", () => {
+  it("keeps the Sophia Render config valid", () => {
     const raw = JSON.parse(
       readFileSync(new URL("../../sophia/openclaw.render.json", import.meta.url), "utf-8"),
     ) as Record<string, unknown>;
@@ -38,6 +38,12 @@ describe("sophia/openclaw.render.json", () => {
           modelId: "eleven_multilingual_v2",
         },
       },
+    });
+    expect(raw.browser).toMatchObject({
+      enabled: true,
+      defaultProfile: "openclaw",
+      headless: true,
+      noSandbox: true,
     });
     expect(
       (raw.messages as { tts?: { elevenlabs?: { voiceSettings?: Record<string, unknown> } } }).tts

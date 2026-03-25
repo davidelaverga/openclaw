@@ -8,6 +8,8 @@ services:
     envVars:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=1536"
+      - key: OPENCLAW_INSTALL_BROWSER
+        value: "1"
       - key: OPENCLAW_CONFIG_PATH
         value: /app/sophia/openclaw.render.json
       - key: PORT
