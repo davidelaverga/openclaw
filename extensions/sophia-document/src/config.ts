@@ -5,6 +5,7 @@ export const DEFAULT_POLL_INTERVAL_MS = 2_000;
 export const DEFAULT_POLL_TIMEOUT_MS = 45_000;
 export const DEFAULT_MAX_CHARS = 48_000;
 export const DEFAULT_FORCE_LLAMA_PARSE_PDF = false;
+const PDF_MIME_TYPE = "application/pdf";
 
 const MIN_POLL_INTERVAL_MS = 250;
 const MAX_POLL_INTERVAL_MS = 10_000;
@@ -15,19 +16,24 @@ const MAX_MAX_CHARS = 200_000;
 
 export const DEFAULT_ALWAYS_PARSE_DOCUMENT_EXTENSIONS = new Set([".ppt", ".pptx", ".xls", ".xlsx"]);
 export const DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS = new Set([".pdf", ".doc", ".docx"]);
-export const DEFAULT_SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
-  ...DEFAULT_ALWAYS_PARSE_DOCUMENT_EXTENSIONS,
-  ...DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS,
-]);
-
-export const DEFAULT_SUPPORTED_DOCUMENT_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+export const DEFAULT_ALWAYS_PARSE_DOCUMENT_MIME_TYPES = new Set([
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+export const DEFAULT_FALLBACK_PARSE_DOCUMENT_MIME_TYPES = new Set([
+  PDF_MIME_TYPE,
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+export const DEFAULT_SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
+  ...DEFAULT_ALWAYS_PARSE_DOCUMENT_EXTENSIONS,
+  ...DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS,
+]);
+export const DEFAULT_SUPPORTED_DOCUMENT_MIME_TYPES = new Set([
+  ...DEFAULT_ALWAYS_PARSE_DOCUMENT_MIME_TYPES,
+  ...DEFAULT_FALLBACK_PARSE_DOCUMENT_MIME_TYPES,
 ]);
 
 export type SophiaDocumentConfig = {
@@ -40,6 +46,8 @@ export type SophiaDocumentConfig = {
   forceLlamaParsePdf: boolean;
   alwaysParseExtensions: Set<string>;
   fallbackParseExtensions: Set<string>;
+  alwaysParseMimeTypes: Set<string>;
+  fallbackParseMimeTypes: Set<string>;
   supportedExtensions: Set<string>;
   supportedMimeTypes: Set<string>;
 };
@@ -54,6 +62,8 @@ type RawSophiaDocumentConfig = {
   forceLlamaParsePdf?: unknown;
   alwaysParseExtensions?: unknown;
   fallbackParseExtensions?: unknown;
+  alwaysParseMimeTypes?: unknown;
+  fallbackParseMimeTypes?: unknown;
   supportedExtensions?: unknown;
   supportedMimeTypes?: unknown;
 };
@@ -141,14 +151,27 @@ export function resolveSophiaDocumentConfig(raw: unknown): SophiaDocumentConfig 
     normalizeExtension,
     DEFAULT_FALLBACK_PARSE_DOCUMENT_EXTENSIONS,
   );
+  const alwaysParseMimeTypes = normalizeStringSet(
+    config.alwaysParseMimeTypes,
+    normalizeMimeType,
+    DEFAULT_ALWAYS_PARSE_DOCUMENT_MIME_TYPES,
+  );
+  const fallbackParseMimeTypes = normalizeStringSet(
+    config.fallbackParseMimeTypes,
+    normalizeMimeType,
+    DEFAULT_FALLBACK_PARSE_DOCUMENT_MIME_TYPES,
+  );
   if (forceLlamaParsePdf) {
     alwaysParseExtensions.add(".pdf");
     fallbackParseExtensions.delete(".pdf");
+    alwaysParseMimeTypes.add(PDF_MIME_TYPE);
+    fallbackParseMimeTypes.delete(PDF_MIME_TYPE);
   }
   const defaultSupportedExtensions = new Set([
     ...alwaysParseExtensions,
     ...fallbackParseExtensions,
   ]);
+  const defaultSupportedMimeTypes = new Set([...alwaysParseMimeTypes, ...fallbackParseMimeTypes]);
   return {
     baseUrl: normalizeBaseUrl(config.baseUrl),
     tier: normalizeTier(config.tier),
@@ -159,6 +182,8 @@ export function resolveSophiaDocumentConfig(raw: unknown): SophiaDocumentConfig 
     forceLlamaParsePdf,
     alwaysParseExtensions,
     fallbackParseExtensions,
+    alwaysParseMimeTypes,
+    fallbackParseMimeTypes,
     supportedExtensions: normalizeStringSet(
       config.supportedExtensions,
       normalizeExtension,
@@ -167,7 +192,7 @@ export function resolveSophiaDocumentConfig(raw: unknown): SophiaDocumentConfig 
     supportedMimeTypes: normalizeStringSet(
       config.supportedMimeTypes,
       normalizeMimeType,
-      DEFAULT_SUPPORTED_DOCUMENT_MIME_TYPES,
+      defaultSupportedMimeTypes,
     ),
   };
 }

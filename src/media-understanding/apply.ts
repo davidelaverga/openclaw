@@ -8,6 +8,7 @@ import {
   normalizeMimeType,
   resolveInputFileLimits,
 } from "../media/input-files.js";
+import type { TrustedPromptFileBlock } from "../plugins/types.js";
 import { resolveAttachmentKind } from "./attachments.js";
 import { runWithConcurrency } from "./concurrency.js";
 import { DEFAULT_ECHO_TRANSCRIPT_FORMAT, sendTranscriptEcho } from "./echo-transcript.js";
@@ -337,12 +338,13 @@ async function extractFileBlocks(params: {
   cache: ReturnType<typeof createMediaAttachmentCache>;
   limits: ReturnType<typeof resolveFileLimits>;
   skipAttachmentIndexes?: Set<number>;
-}): Promise<string[]> {
+}): Promise<{ blocks: string[]; trustedPromptFileBlocks: TrustedPromptFileBlock[] }> {
   const { attachments, cache, limits, skipAttachmentIndexes } = params;
   if (!attachments || attachments.length === 0) {
-    return [];
+    return { blocks: [], trustedPromptFileBlocks: [] };
   }
   const blocks: string[] = [];
+  const trustedPromptFileBlocks: TrustedPromptFileBlock[] = [];
   for (const attachment of attachments) {
     if (!attachment) {
       continue;
@@ -445,7 +447,9 @@ async function extractFileBlocks(params: {
     }
     const text = extracted?.text?.trim() ?? "";
     let blockText = text;
+    let blockState: TrustedPromptFileBlock["state"] = "usable";
     if (!blockText) {
+      blockState = "degraded";
       if (extracted?.images && extracted.images.length > 0) {
         blockText = "[PDF content rendered to images; images not forwarded to model]";
       } else {
@@ -459,8 +463,16 @@ async function extractFileBlocks(params: {
     blocks.push(
       `<file name="${xmlEscapeAttr(safeName)}" mime="${xmlEscapeAttr(mimeType)}">\n${escapeFileBlockContent(blockText)}\n</file>`,
     );
+    trustedPromptFileBlocks.push({
+      fileName: safeName,
+      mimeType,
+      state: blockState,
+    });
   }
-  return blocks;
+  return {
+    blocks,
+    trustedPromptFileBlocks,
+  };
 }
 
 export async function applyMediaUnderstanding(params: {
@@ -550,14 +562,18 @@ export async function applyMediaUnderstanding(params: {
         .filter((output) => output.kind === "audio.transcription")
         .map((output) => output.attachmentIndex),
     );
-    const fileBlocks = await extractFileBlocks({
+    const extractedFileBlocks = await extractFileBlocks({
       attachments,
       cache,
       limits: resolveFileLimits(cfg),
       skipAttachmentIndexes: audioAttachmentIndexes.size > 0 ? audioAttachmentIndexes : undefined,
     });
+    const fileBlocks = extractedFileBlocks.blocks;
     if (fileBlocks.length > 0) {
       ctx.Body = appendFileBlocks(ctx.Body, fileBlocks);
+    }
+    if (extractedFileBlocks.trustedPromptFileBlocks.length > 0) {
+      ctx.TrustedPromptFileBlocks = extractedFileBlocks.trustedPromptFileBlocks;
     }
     if (outputs.length > 0 || fileBlocks.length > 0) {
       finalizeInboundContext(ctx, {

@@ -25,6 +25,7 @@ import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
   PluginHookAgentContext,
   PluginHookBeforeAgentStartResult,
+  PluginHookBeforePromptBuildEvent,
   PluginHookBeforePromptBuildResult,
 } from "../../../plugins/types.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../../../routing/session-key.js";
@@ -150,7 +151,7 @@ import type { EmbeddedRunAttemptParams, EmbeddedRunAttemptResult } from "./types
 type PromptBuildHookRunner = {
   hasHooks: (hookName: "before_prompt_build" | "before_agent_start") => boolean;
   runBeforePromptBuild: (
-    event: { prompt: string; messages: unknown[] },
+    event: PluginHookBeforePromptBuildEvent,
     ctx: PluginHookAgentContext,
   ) => Promise<PluginHookBeforePromptBuildResult | undefined>;
   runBeforeAgentStart: (
@@ -1179,19 +1180,21 @@ function wrapStreamFnDecodeXaiToolCallArguments(baseFn: StreamFn): StreamFn {
 export async function resolvePromptBuildHookResult(params: {
   prompt: string;
   messages: unknown[];
+  trustedPromptFileBlocks?: PluginHookBeforePromptBuildEvent["trustedPromptFileBlocks"];
   hookCtx: PluginHookAgentContext;
   hookRunner?: PromptBuildHookRunner | null;
   legacyBeforeAgentStartResult?: PluginHookBeforeAgentStartResult;
 }): Promise<PluginHookBeforePromptBuildResult> {
+  const promptBuildEvent: PluginHookBeforePromptBuildEvent = {
+    prompt: params.prompt,
+    messages: params.messages,
+    ...(params.trustedPromptFileBlocks
+      ? { trustedPromptFileBlocks: params.trustedPromptFileBlocks }
+      : {}),
+  };
   const promptBuildResult = params.hookRunner?.hasHooks("before_prompt_build")
     ? await params.hookRunner
-        .runBeforePromptBuild(
-          {
-            prompt: params.prompt,
-            messages: params.messages,
-          },
-          params.hookCtx,
-        )
+        .runBeforePromptBuild(promptBuildEvent, params.hookCtx)
         .catch((hookErr: unknown) => {
           log.warn(`before_prompt_build hook failed: ${String(hookErr)}`);
           return undefined;
@@ -2433,6 +2436,7 @@ export async function runEmbeddedAttempt(
         const hookResult = await resolvePromptBuildHookResult({
           prompt: params.prompt,
           messages: activeSession.messages,
+          trustedPromptFileBlocks: params.trustedPromptFileBlocks,
           hookCtx,
           hookRunner,
           legacyBeforeAgentStartResult: params.legacyBeforeAgentStartResult,

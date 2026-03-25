@@ -184,6 +184,7 @@ export function buildEmbeddedRunBaseParams(params: {
     skillsSnapshot: params.run.skillsSnapshot,
     ownerNumbers: params.run.ownerNumbers,
     inputProvenance: params.run.inputProvenance,
+    trustedPromptFileBlocks: params.run.trustedPromptFileBlocks,
     senderIsOwner: params.run.senderIsOwner,
     enforceFinalTag: resolveEnforceFinalTag(params.run, params.provider),
     provider: params.provider,

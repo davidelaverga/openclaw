@@ -2,6 +2,7 @@ import type { ImageContent } from "@mariozechner/pi-ai";
 import type { ReasoningLevel, ThinkLevel, VerboseLevel } from "../../../auto-reply/thinking.js";
 import type { ReplyPayload } from "../../../auto-reply/types.js";
 import type { OpenClawConfig } from "../../../config/config.js";
+import type { TrustedPromptFileBlock } from "../../../plugins/types.js";
 import type { enqueueCommand } from "../../../process/command-queue.js";
 import type { InputProvenance } from "../../../sessions/input-provenance.js";
 import type { ExecElevatedDefaults, ExecToolDefaults } from "../../bash-tools.js";
@@ -118,6 +119,7 @@ export type RunEmbeddedPiAgentParams = {
   inputProvenance?: InputProvenance;
   streamParams?: AgentStreamParams;
   ownerNumbers?: string[];
+  trustedPromptFileBlocks?: TrustedPromptFileBlock[];
   enforceFinalTag?: boolean;
   /**
    * Allow a single run attempt even when all auth profiles are in cooldown,

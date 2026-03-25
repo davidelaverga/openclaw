@@ -51,6 +51,25 @@
         "items": { "type": "string" },
         "default": [".pdf", ".doc", ".docx"]
       },
+      "alwaysParseMimeTypes": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": [
+          "application/vnd.ms-powerpoint",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ]
+      },
+      "fallbackParseMimeTypes": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ]
+      },
       "supportedExtensions": {
         "type": "array",
         "items": { "type": "string" }
@@ -97,6 +116,14 @@
     "fallbackParseExtensions": {
       "label": "Fallback Parse Extensions",
       "help": "Extensions that should only route through LlamaParse when the prompt lacks a usable matching <file> block."
+    },
+    "alwaysParseMimeTypes": {
+      "label": "Always Parse MIME Types",
+      "help": "MIME types that should always route through LlamaParse when extension-based routing is unavailable."
+    },
+    "fallbackParseMimeTypes": {
+      "label": "Fallback Parse MIME Types",
+      "help": "MIME types that should route through LlamaParse only when trusted extraction is missing or degraded."
     },
     "supportedExtensions": {
       "label": "Supported Extensions",

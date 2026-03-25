@@ -63,7 +63,15 @@ function logPluginEvent(params: {
 async function runBeforePromptBuild(params: {
   api: OpenClawPluginApi;
   deps: SophiaDocumentPluginDeps;
-  event: { prompt: string; messages: unknown[] };
+  event: {
+    prompt: string;
+    messages: unknown[];
+    trustedPromptFileBlocks?: Array<{
+      fileName: string;
+      mimeType?: string;
+      state: "degraded" | "usable";
+    }>;
+  };
 }): Promise<{ appendSystemContext: string } | undefined> {
   const config = resolveSophiaDocumentConfig(params.api.pluginConfig);
   const attachments = extractMediaAttachments(params.event.prompt);
@@ -102,8 +110,9 @@ async function runBeforePromptBuild(params: {
     },
   });
   const routeDecision = selectDocumentParseRoute({
-    prompt: params.event.prompt,
     fileName: attachmentFileName,
+    mimeType: attachment.mimeType,
+    trustedPromptFileBlocks: params.event.trustedPromptFileBlocks,
     config,
   });
   logPluginEvent({
@@ -113,8 +122,8 @@ async function runBeforePromptBuild(params: {
     details: {
       fileName: attachmentFileName,
       state: routeDecision.fileBlockState,
-      mimeType: routeDecision.matchedFileBlock?.mimeType ?? null,
-      chars: routeDecision.matchedFileBlock?.content.trim().length ?? 0,
+      trustBoundary: routeDecision.matchedTrustedFileBlock ? "trusted" : "missing",
+      mimeType: routeDecision.matchedTrustedFileBlock?.mimeType ?? null,
     },
   });
   logPluginEvent({
@@ -126,6 +135,8 @@ async function runBeforePromptBuild(params: {
       reason: routeDecision.reason,
       fileName: attachmentFileName,
       extension: routeDecision.extension || null,
+      mimeType: routeDecision.mimeType || null,
+      routePolicyMatchSource: routeDecision.routePolicyMatchSource,
       supportedCount: selection.supportedCount,
       additionalSupportedDocuments: selection.additionalSupportedCount,
       fileBlockState: routeDecision.fileBlockState,
