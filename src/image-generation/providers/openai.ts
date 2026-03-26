@@ -2,7 +2,8 @@ import { resolveApiKeyForProvider } from "../../agents/model-auth.js";
 import type { ImageGenerationProviderPlugin } from "../../plugins/types.js";
 
 const DEFAULT_OPENAI_IMAGE_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-1";
+const OPENAI_IMAGE_MODELS = ["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"] as const;
+const DEFAULT_OPENAI_IMAGE_MODEL = OPENAI_IMAGE_MODELS[0];
 const DEFAULT_OUTPUT_MIME = "image/png";
 const DEFAULT_SIZE = "1024x1024";
 const OPENAI_SUPPORTED_SIZES = ["1024x1024", "1024x1536", "1536x1024"] as const;
@@ -24,7 +25,7 @@ export function buildOpenAIImageGenerationProvider(): ImageGenerationProviderPlu
     id: "openai",
     label: "OpenAI",
     defaultModel: DEFAULT_OPENAI_IMAGE_MODEL,
-    models: [DEFAULT_OPENAI_IMAGE_MODEL],
+    models: [...OPENAI_IMAGE_MODELS],
     capabilities: {
       generate: {
         maxCount: 4,
@@ -46,7 +47,9 @@ export function buildOpenAIImageGenerationProvider(): ImageGenerationProviderPlu
     },
     async generateImage(req) {
       if ((req.inputImages?.length ?? 0) > 0) {
-        throw new Error("OpenAI image generation provider does not support reference-image edits");
+        throw new Error(
+          "OpenAI image generation provider currently supports text-to-image generation only",
+        );
       }
       const auth = await resolveApiKeyForProvider({
         provider: "openai",

@@ -71,7 +71,7 @@ const ImageGenerateToolSchema = Type.Object({
     }),
   ),
   model: Type.Optional(
-    Type.String({ description: "Optional provider/model override, e.g. openai/gpt-image-1." }),
+    Type.String({ description: "Optional provider/model override, e.g. openai/gpt-image-1.5." }),
   ),
   filename: Type.Optional(
     Type.String({

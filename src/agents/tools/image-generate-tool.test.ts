@@ -37,8 +37,8 @@ function stubImageGenerationProviders() {
     },
     {
       id: "openai",
-      defaultModel: "gpt-image-1",
-      models: ["gpt-image-1"],
+      defaultModel: "gpt-image-1.5",
+      models: ["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
       capabilities: {
         generate: {
           maxCount: 4,
@@ -82,7 +82,7 @@ describe("createImageGenerateTool", () => {
     vi.stubEnv("OPENAI_API_KEY", "openai-test");
 
     expect(resolveImageGenerationModelConfigForTool({ cfg: {} })).toEqual({
-      primary: "openai/gpt-image-1",
+      primary: "openai/gpt-image-1.5",
     });
     expect(createImageGenerateTool({ config: {} })).not.toBeNull();
   });
@@ -106,14 +106,14 @@ describe("createImageGenerateTool", () => {
       }),
     ).toEqual({
       primary: "google/gemini-3.1-flash-image-preview",
-      fallbacks: ["openai/gpt-image-1"],
+      fallbacks: ["openai/gpt-image-1.5"],
     });
   });
 
   it("generates images and returns MEDIA paths", async () => {
     const generateImage = vi.spyOn(imageGenerationRuntime, "generateImage").mockResolvedValue({
       provider: "openai",
-      model: "gpt-image-1",
+      model: "gpt-image-1.5",
       attempts: [],
       images: [
         {
@@ -148,7 +148,7 @@ describe("createImageGenerateTool", () => {
         agents: {
           defaults: {
             imageGenerationModel: {
-              primary: "openai/gpt-image-1",
+              primary: "openai/gpt-image-1.5",
             },
           },
         },
@@ -163,7 +163,7 @@ describe("createImageGenerateTool", () => {
 
     const result = await tool.execute("call-1", {
       prompt: "A cat wearing sunglasses",
-      model: "openai/gpt-image-1",
+      model: "openai/gpt-image-1.5",
       filename: "cats/output.png",
       count: 2,
       size: "1024x1024",
@@ -175,14 +175,14 @@ describe("createImageGenerateTool", () => {
           agents: {
             defaults: {
               imageGenerationModel: {
-                primary: "openai/gpt-image-1",
+                primary: "openai/gpt-image-1.5",
               },
             },
           },
         },
         prompt: "A cat wearing sunglasses",
         agentDir: "/tmp/agent",
-        modelOverride: "openai/gpt-image-1",
+        modelOverride: "openai/gpt-image-1.5",
         size: "1024x1024",
         count: 2,
         inputImages: [],
@@ -208,12 +208,12 @@ describe("createImageGenerateTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("Generated 2 images with openai/gpt-image-1."),
+          text: expect.stringContaining("Generated 2 images with openai/gpt-image-1.5."),
         },
       ],
       details: {
         provider: "openai",
-        model: "gpt-image-1",
+        model: "gpt-image-1.5",
         count: 2,
         paths: ["/tmp/generated-1.png", "/tmp/generated-2.png"],
         filename: "cats/output.png",
@@ -425,6 +425,8 @@ describe("createImageGenerateTool", () => {
     expect(text).toContain("google (default gemini-3.1-flash-image-preview)");
     expect(text).toContain("gemini-3.1-flash-image-preview");
     expect(text).toContain("gemini-3-pro-image-preview");
+    expect(text).toContain("openai (default gpt-image-1.5)");
+    expect(text).toContain("gpt-image-1-mini");
     expect(text).toContain("editing up to 5 refs");
     expect(text).toContain("aspect ratios 1:1, 16:9");
     expect(result).toMatchObject({
@@ -441,6 +443,17 @@ describe("createImageGenerateTool", () => {
               edit: expect.objectContaining({
                 enabled: true,
                 maxInputImages: 5,
+              }),
+            }),
+          }),
+          expect.objectContaining({
+            id: "openai",
+            defaultModel: "gpt-image-1.5",
+            models: expect.arrayContaining(["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"]),
+            capabilities: expect.objectContaining({
+              edit: expect.objectContaining({
+                enabled: false,
+                maxInputImages: 0,
               }),
             }),
           }),

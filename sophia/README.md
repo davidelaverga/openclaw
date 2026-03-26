@@ -43,7 +43,7 @@ In **Render Dashboard → your service → Environment** (or in the `Sophia-Claw
 - `SETUP_PASSWORD` — password for `/setup`
 
 - `ANTHROPIC_API_KEY` — your Anthropic API key
-- `OPENAI_API_KEY` — your OpenAI API key (for memory embeddings)
+- `OPENAI_API_KEY` — your OpenAI API key (for memory embeddings and direct image generation)
 - `DEEPGRAM_API_KEY` — your Deepgram API key (inbound voice note transcription)
 - `ELEVENLABS_API_KEY` — your ElevenLabs API key (outbound voice replies)
 
@@ -116,6 +116,7 @@ Then verify the voice layer end to end in WhatsApp:
 
 - send a text message and confirm Sophia replies in text
 - send a voice note and confirm Sophia replies with a voice note
+- ask for a direct render (for example a portrait or illustration) and confirm Sophia replies with an inline generated image
 - confirm the 💙 ack reaction appears promptly
 
 Check **Render Dashboard → Logs** for real-time monitoring.
@@ -137,3 +138,12 @@ Two options:
 2. **Quick operational edits**: Edit files directly on `/data/.openclaw/sophia/` in Render Shell when you need an immediate local-only change.
 
 If you change repo-backed seed files and want them to replace existing persistent files, do it deliberately in Render Shell. Automatic seeding only fills in missing files; it does not overwrite existing ones.
+
+For behavior changes in `sophia/AGENTS.md`, redeploying alone is not enough once `/data/.openclaw/sophia/AGENTS.md` already exists. If you want the new instructions live, refresh that file deliberately in Render Shell:
+
+```bash
+cp /data/.openclaw/sophia/AGENTS.md /data/.openclaw/sophia/AGENTS.md.bak
+cp /app/sophia/AGENTS.md /data/.openclaw/sophia/AGENTS.md
+```
+
+Do this only for instruction-file changes you want to roll out immediately. Do not blindly overwrite `USER.md` or `MEMORY.md`.

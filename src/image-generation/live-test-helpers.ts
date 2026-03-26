@@ -3,7 +3,7 @@ import type { OpenClawConfig } from "../config/config.js";
 
 export const DEFAULT_LIVE_IMAGE_MODELS: Record<string, string> = {
   google: "google/gemini-3.1-flash-image-preview",
-  openai: "openai/gpt-image-1",
+  openai: "openai/gpt-image-1.5",
 };
 
 export function parseCaseFilter(raw?: string): Set<string> | null {

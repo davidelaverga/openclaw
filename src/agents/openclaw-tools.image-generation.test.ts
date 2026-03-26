@@ -15,8 +15,8 @@ function stubImageGenerationProviders() {
   vi.spyOn(imageGenerationRuntime, "listRuntimeImageGenerationProviders").mockReturnValue([
     {
       id: "openai",
-      defaultModel: "gpt-image-1",
-      models: ["gpt-image-1"],
+      defaultModel: "gpt-image-1.5",
+      models: ["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
       capabilities: {
         generate: {
           supportsSize: true,
@@ -54,7 +54,7 @@ describe("openclaw tools image generation registration", () => {
         agents: {
           defaults: {
             imageGenerationModel: {
-              primary: "openai/gpt-image-1",
+              primary: "openai/gpt-image-1.5",
             },
           },
         },

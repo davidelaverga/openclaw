@@ -11,6 +11,9 @@
       "model": {
         "primary": "anthropic/claude-sonnet-4-6"
       },
+      "imageGenerationModel": {
+        "primary": "openai/gpt-image-1.5"
+      },
       "workspace": "/data/.openclaw/sophia",
       "memorySearch": {
         "provider": "openai",

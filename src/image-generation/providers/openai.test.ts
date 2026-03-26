@@ -27,10 +27,12 @@ describe("OpenAI image-generation provider", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const provider = buildOpenAIImageGenerationProvider();
+    expect(provider.defaultModel).toBe("gpt-image-1.5");
+    expect(provider.models).toEqual(["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"]);
     const authStore = { version: 1, profiles: {} };
     const result = await provider.generateImage({
       provider: "openai",
-      model: "gpt-image-1",
+      model: "gpt-image-1.5",
       prompt: "draw a cat",
       cfg: {},
       authStore,
@@ -47,7 +49,7 @@ describe("OpenAI image-generation provider", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          model: "gpt-image-1",
+          model: "gpt-image-1.5",
           prompt: "draw a cat",
           n: 1,
           size: "1024x1024",
@@ -63,7 +65,7 @@ describe("OpenAI image-generation provider", () => {
           revisedPrompt: "revised",
         },
       ],
-      model: "gpt-image-1",
+      model: "gpt-image-1.5",
     });
   });
 
@@ -73,11 +75,11 @@ describe("OpenAI image-generation provider", () => {
     await expect(
       provider.generateImage({
         provider: "openai",
-        model: "gpt-image-1",
+        model: "gpt-image-1.5",
         prompt: "Edit this image",
         cfg: {},
         inputImages: [{ buffer: Buffer.from("x"), mimeType: "image/png" }],
       }),
-    ).rejects.toThrow("does not support reference-image edits");
+    ).rejects.toThrow("currently supports text-to-image generation only");
   });
 });
