@@ -149,8 +149,8 @@
   "channels": {
     "whatsapp": {
       "enabled": true,
-      "selfChatMode": true,
-      "dmPolicy": "pairing",
+      "selfChatMode": false,
+      "dmPolicy": "allowlist",
       "allowFrom": ["+393894991082"],
       "groupPolicy": "allowlist",
       "ackReaction": {

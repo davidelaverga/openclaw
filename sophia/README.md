@@ -105,6 +105,24 @@ Scan the QR code with your phone: **WhatsApp → Linked Devices → Link a Devic
 
 WhatsApp credentials save to `/data/.openclaw/credentials/` on the persistent disk, so they survive redeploys.
 
+### Switching Sophia to a dedicated WhatsApp number
+
+If you move Sophia off self-chat on your personal number and onto a separate SIM/device:
+
+1. Update `sophia/openclaw.render.json` in this repo. Render loads config from `/app/sophia/openclaw.render.json`, not `/data/.openclaw/sophia/openclaw.render.json`.
+2. Set `channels.whatsapp.selfChatMode` to `false`.
+3. Set `channels.whatsapp.dmPolicy` to `"allowlist"` and keep `channels.whatsapp.allowFrom` set to your personal number.
+4. Redeploy or restart the Render service so the repo-backed config is loaded.
+5. Clear only the WhatsApp auth state, then re-link the new device:
+
+```bash
+openclaw channels logout --channel whatsapp
+openclaw channels login --channel whatsapp
+```
+
+If you need a hard reset instead of `channels logout`, remove `/data/.openclaw/credentials/whatsapp`.
+Do not delete `/data/.openclaw/sophia/` or `/data/.openclaw/sessions/` — those keep Sophia's memory, workspace state, and conversation history intact.
+
 ### Step 7 — Verify
 
 ```bash

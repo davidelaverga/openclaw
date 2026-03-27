@@ -56,6 +56,9 @@ describe("sophia/openclaw.render.json", () => {
     });
     expect(raw.channels).toMatchObject({
       whatsapp: {
+        selfChatMode: false,
+        dmPolicy: "allowlist",
+        allowFrom: ["+393894991082"],
         ackReaction: {
           emoji: "💙",
           direct: true,
