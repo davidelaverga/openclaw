@@ -1704,6 +1704,7 @@ Batches rapid text-only messages from the same sender into a single agent turn. 
       auto: "always", // off | always | inbound | tagged
       mode: "final", // final | all
       provider: "elevenlabs",
+      strictProvider: true,
       summaryModel: "openai/gpt-4.1-mini",
       modelOverrides: { enabled: true },
       maxTextLength: 4000,
@@ -1737,6 +1738,7 @@ Batches rapid text-only messages from the same sender into a single agent turn. 
 ```
 
 - `auto` controls auto-TTS. `/tts off|always|inbound|tagged` overrides per session.
+- `strictProvider: true` makes the configured provider authoritative: saved provider prefs are ignored and OpenClaw will not fall back to other TTS providers.
 - `summaryModel` overrides `agents.defaults.model.primary` for auto-summary.
 - `modelOverrides` is enabled by default; `modelOverrides.allowProvider` defaults to `false` (opt-in).
 - API keys fall back to `ELEVENLABS_API_KEY`/`XI_API_KEY` and `OPENAI_API_KEY`.
