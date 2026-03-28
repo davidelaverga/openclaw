@@ -44,10 +44,6 @@
     "media": {
       "audio": {
         "enabled": true,
-        "scope": {
-          "default": "allow",
-          "rules": [{ "action": "deny", "match": { "channel": "whatsapp", "chatType": "direct" } }]
-        },
         "language": "multi",
         "providerOptions": {
           "deepgram": {
