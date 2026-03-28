@@ -32,8 +32,10 @@ export type TtsConfig = {
   enabled?: boolean;
   /** Apply TTS to final replies only or to all replies (tool/block/final). */
   mode?: TtsMode;
-  /** Primary TTS provider (fallbacks are automatic). */
+  /** Primary TTS provider. */
   provider?: TtsProvider;
+  /** When true, honor the configured provider exactly and disable prefs/fallback switching. */
+  strictProvider?: boolean;
   /** Optional model override for TTS auto-summary (provider/model or alias). */
   summaryModel?: string;
   /** Allow the model to override TTS parameters. */

@@ -27,13 +27,17 @@ export const ttsHandlers: GatewayRequestHandlers = {
       const prefsPath = resolveTtsPrefsPath(config);
       const provider = getTtsProvider(config, prefsPath);
       const autoMode = resolveTtsAutoMode({ config, prefsPath });
-      const fallbackProviders = resolveTtsProviderOrder(provider, cfg)
-        .slice(1)
-        .filter((candidate) => isTtsProviderConfigured(config, candidate, cfg));
+      const strictConfiguredProvider = config.strictProvider && config.providerSource === "config";
+      const fallbackProviders = strictConfiguredProvider
+        ? []
+        : resolveTtsProviderOrder(provider, cfg)
+            .slice(1)
+            .filter((candidate) => isTtsProviderConfigured(config, candidate, cfg));
       respond(true, {
         enabled: isTtsEnabled(config, prefsPath),
         auto: autoMode,
         provider,
+        strictProvider: strictConfiguredProvider,
         fallbackProvider: fallbackProviders[0] ?? null,
         fallbackProviders,
         prefsPath,

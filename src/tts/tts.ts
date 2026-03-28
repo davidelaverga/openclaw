@@ -91,6 +91,7 @@ export type ResolvedTtsConfig = {
   mode: TtsMode;
   provider: TtsProvider;
   providerSource: "config" | "default";
+  strictProvider: boolean;
   summaryModel?: string;
   modelOverrides: ResolvedTtsModelOverrides;
   elevenlabs: {
@@ -265,6 +266,7 @@ export function resolveTtsConfig(cfg: OpenClawConfig): ResolvedTtsConfig {
     mode: raw.mode ?? "final",
     provider: normalizeSpeechProviderId(raw.provider) ?? "microsoft",
     providerSource,
+    strictProvider: raw.strictProvider === true,
     summaryModel: raw.summaryModel?.trim() || undefined,
     modelOverrides: resolveModelOverridePolicy(raw.modelOverrides),
     elevenlabs: {
@@ -444,6 +446,9 @@ export function setTtsEnabled(prefsPath: string, enabled: boolean): void {
 }
 
 export function getTtsProvider(config: ResolvedTtsConfig, prefsPath: string): TtsProvider {
+  if (config.strictProvider && config.providerSource === "config") {
+    return normalizeSpeechProviderId(config.provider) ?? config.provider;
+  }
   const prefs = readPrefs(prefsPath);
   const prefsProvider = normalizeSpeechProviderId(prefs.tts?.provider);
   if (prefsProvider) {
@@ -618,10 +623,15 @@ function resolveTtsRequestSetup(params: {
   }
 
   const userProvider = getTtsProvider(config, prefsPath);
-  const provider = normalizeSpeechProviderId(params.providerOverride) ?? userProvider;
+  const strictConfiguredProvider = config.strictProvider && config.providerSource === "config";
+  const provider = strictConfiguredProvider
+    ? (normalizeSpeechProviderId(config.provider) ?? config.provider)
+    : (normalizeSpeechProviderId(params.providerOverride) ?? userProvider);
   return {
     config,
-    providers: resolveTtsProviderOrder(provider, params.cfg),
+    providers: strictConfiguredProvider
+      ? [provider]
+      : resolveTtsProviderOrder(provider, params.cfg),
   };
 }
 

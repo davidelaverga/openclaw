@@ -33,6 +33,7 @@ describe("sophia/openclaw.render.json", () => {
       tts: {
         auto: "inbound",
         provider: "elevenlabs",
+        strictProvider: true,
         elevenlabs: {
           voiceId: "aFueGIISJUmscc05ZNfD",
           modelId: "eleven_multilingual_v2",

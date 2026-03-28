@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { completeSimple, type AssistantMessage } from "@mariozechner/pi-ai";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ensureCustomApiRegistered } from "../agents/custom-api-registry.js";
@@ -587,6 +590,66 @@ describe("tts", () => {
 
       expect(config.provider).toBe("microsoft");
       expect(getTtsProvider(config, "/tmp/tts-prefs-normalized.json")).toBe("microsoft");
+    });
+  });
+
+  describe("strictProvider", () => {
+    it("prefers the configured provider over saved prefs when strictProvider is enabled", () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-tts-prefs-"));
+      const prefsPath = path.join(tempDir, "tts.json");
+      fs.writeFileSync(
+        prefsPath,
+        JSON.stringify({
+          tts: {
+            provider: "openai",
+          },
+        }),
+      );
+
+      try {
+        const config = resolveTtsConfig({
+          agents: { defaults: { model: { primary: "openai/gpt-4o-mini" } } },
+          messages: {
+            tts: {
+              provider: "elevenlabs",
+              strictProvider: true,
+            },
+          },
+        });
+
+        expect(getTtsProvider(config, prefsPath)).toBe("elevenlabs");
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it("disables fallback providers when strictProvider is enabled", async () => {
+      await withEnv(
+        {
+          OPENAI_API_KEY: "test-openai-key",
+          ELEVENLABS_API_KEY: undefined,
+          XI_API_KEY: undefined,
+        },
+        async () => {
+          const result = await tts.textToSpeech({
+            text: "Hello there from Sophia.",
+            cfg: {
+              agents: { defaults: { model: { primary: "openai/gpt-4o-mini" } } },
+              messages: {
+                tts: {
+                  provider: "elevenlabs",
+                  strictProvider: true,
+                },
+              },
+            },
+          });
+
+          expect(result.success).toBe(false);
+          expect(result.error).toContain("elevenlabs: not configured");
+          expect(result.error).not.toContain("openai:");
+          expect(result.error).not.toContain("microsoft:");
+        },
+      );
     });
   });
 
