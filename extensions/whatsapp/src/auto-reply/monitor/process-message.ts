@@ -403,14 +403,22 @@ export async function processMessage(params: {
         }
       },
       deliver: async (payload: ReplyPayload, info) => {
+        let deliveryPayload = payload;
+        let deliveryParts = resolveSendableOutboundReplyParts(payload);
         if (info.kind !== "final") {
-          // Only deliver final replies to external messaging channels (WhatsApp).
-          // Block (reasoning/thinking) and tool updates are meant for the internal
-          // web UI only; sending them here leaks chain-of-thought to end users.
-          return;
+          // Suppress non-final text updates on WhatsApp, but still allow media-bearing
+          // tool/block payloads (for example TTS voice notes) through as media-only.
+          if (!deliveryParts.hasMedia) {
+            return;
+          }
+          deliveryPayload = {
+            ...payload,
+            text: undefined,
+          };
+          deliveryParts = resolveSendableOutboundReplyParts(deliveryPayload);
         }
         await deliverWebReply({
-          replyResult: payload,
+          replyResult: deliveryPayload,
           msg: params.msg,
           mediaLocalRoots,
           maxMediaBytes: params.maxMediaBytes,
@@ -422,19 +430,20 @@ export async function processMessage(params: {
           tableMode,
         });
         didSendReply = true;
-        const shouldLog = payload.text ? true : undefined;
-        params.rememberSentText(payload.text, {
-          combinedBody,
-          combinedBodySessionKey: params.route.sessionKey,
-          logVerboseMessage: shouldLog,
-        });
+        const shouldLog = deliveryPayload.text ? true : undefined;
+        if (deliveryPayload.text) {
+          params.rememberSentText(deliveryPayload.text, {
+            combinedBody,
+            combinedBodySessionKey: params.route.sessionKey,
+            logVerboseMessage: shouldLog,
+          });
+        }
         const fromDisplay =
           params.msg.chatType === "group" ? conversationId : (params.msg.from ?? "unknown");
-        const reply = resolveSendableOutboundReplyParts(payload);
-        const hasMedia = reply.hasMedia;
+        const hasMedia = deliveryParts.hasMedia;
         whatsappOutboundLog.info(`Auto-replied to ${fromDisplay}${hasMedia ? " (media)" : ""}`);
         if (shouldLogVerbose()) {
-          const preview = payload.text != null ? elide(reply.text, 400) : "<media>";
+          const preview = deliveryPayload.text != null ? elide(deliveryParts.text, 400) : "<media>";
           whatsappOutboundLog.debug(`Reply body: ${preview}${hasMedia ? " (media)" : ""}`);
         }
       },
@@ -452,8 +461,8 @@ export async function processMessage(params: {
       onReplyStart: params.msg.sendComposing,
     },
     replyOptions: {
-      // WhatsApp delivery intentionally suppresses non-final payloads.
-      // Keep block streaming disabled so final replies are still produced.
+      // WhatsApp still suppresses non-final text updates. Keep block streaming
+      // disabled so text replies continue to resolve to a final payload.
       disableBlockStreaming: true,
       onModelSelected,
     },
@@ -462,6 +471,9 @@ export async function processMessage(params: {
   if (!queuedFinal) {
     if (shouldClearGroupHistory) {
       params.groupHistories.set(params.groupHistoryKey, []);
+    }
+    if (didSendReply) {
+      return true;
     }
     logVerbose("Skipping auto-reply: silent token or no text/media returned from resolver");
     return false;
