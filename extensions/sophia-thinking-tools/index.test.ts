@@ -118,6 +118,7 @@ describe("sophia-thinking-tools plugin", () => {
     expect(on).toHaveBeenCalledWith("before_tool_call", expect.any(Function));
     expect(on).toHaveBeenCalledWith("llm_output", expect.any(Function));
     expect(on).toHaveBeenCalledWith("agent_end", expect.any(Function));
+    expect(on).toHaveBeenCalledWith("session_end", expect.any(Function));
   });
 
   it("prefers workspace taxonomy over source taxonomy beside active config", async () => {
@@ -329,6 +330,70 @@ describe("sophia-thinking-tools plugin", () => {
     });
   });
 
+  it("preserves other active run state when agent_end provides a specific run id", async () => {
+    const on = vi.fn();
+    const plugin = createSophiaThinkingToolsPlugin({
+      resolveStateDirFn: () => "/tmp/openclaw-state",
+    });
+
+    plugin.register?.(
+      createTestPluginApi({
+        id: "sophia-thinking-tools",
+        name: "Sophia Thinking Tools",
+        source: "test",
+        config: {} as never,
+        runtime: {} as never,
+        on,
+      }),
+    );
+
+    const beforeToolCall = getRegisteredHook(on, "before_tool_call");
+    const agentEnd = getRegisteredHook(on, "agent_end");
+    const sessionEnd = getRegisteredHook(on, "session_end");
+    expect(beforeToolCall).toBeDefined();
+    expect(agentEnd).toBeDefined();
+    expect(sessionEnd).toBeDefined();
+
+    await beforeToolCall?.(
+      { toolName: "inhabit_scene", params: {}, runId: "run-a" },
+      { toolName: "inhabit_scene", runId: "run-a", sessionId: "session-a" },
+    );
+    await beforeToolCall?.(
+      { toolName: "inhabit_scene", params: {}, runId: "run-b" },
+      { toolName: "inhabit_scene", runId: "run-b", sessionId: "session-a" },
+    );
+
+    await agentEnd?.(
+      { messages: [], success: true, runId: "run-a" },
+      { toolName: "inhabit_scene", sessionId: "session-a" },
+    );
+
+    const runBStillAllowed = await beforeToolCall?.(
+      { toolName: "perspective_shift", params: {}, runId: "run-b" },
+      { toolName: "perspective_shift", runId: "run-b", sessionId: "session-a" },
+    );
+    expect(runBStillAllowed).toBeUndefined();
+
+    const runABlockedAfterCleanup = await beforeToolCall?.(
+      { toolName: "perspective_shift", params: {}, runId: "run-a" },
+      { toolName: "perspective_shift", runId: "run-a", sessionId: "session-a" },
+    );
+    expect(runABlockedAfterCleanup).toEqual({
+      block: true,
+      blockReason: "perspective_shift requires inhabit_scene first in the same run",
+    });
+
+    await sessionEnd?.({ sessionId: "session-a" }, { sessionId: "session-a" });
+    const runBBlockedAfterSessionEnd = await beforeToolCall?.(
+      { toolName: "perspective_shift", params: {}, runId: "run-b" },
+      { toolName: "perspective_shift", runId: "run-b", sessionId: "session-a" },
+    );
+    expect(runBBlockedAfterSessionEnd).toEqual({
+      block: true,
+      blockReason: "perspective_shift requires inhabit_scene first in the same run",
+    });
+  });
+
   it("uses configured anthropic primary specialist settings", async () => {
     delete process.env.OPENAI_API_KEY;
     process.env.ANTHROPIC_API_KEY = "anthropic-test-key";
@@ -388,6 +453,54 @@ describe("sophia-thinking-tools plugin", () => {
     const body = JSON.parse(String(init.body));
     expect(body.model).toBe("claude-custom-primary");
     expect(body.max_tokens).toBe(333);
+  });
+
+  it("uses provider default model when provider override omits model", async () => {
+    delete process.env.OPENAI_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "anthropic-test-key";
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          content: [{ type: "text", text: "provider default model output" }],
+        }),
+        { status: 200 },
+      ),
+    ) as unknown as typeof globalThis.fetch;
+
+    const registerTool = vi.fn();
+    const plugin = createSophiaThinkingToolsPlugin({
+      resolveStateDirFn: () => "/tmp/openclaw-state",
+    });
+
+    plugin.register?.(
+      createTestPluginApi({
+        id: "sophia-thinking-tools",
+        name: "Sophia Thinking Tools",
+        source: "test",
+        config: {} as never,
+        runtime: {} as never,
+        pluginConfig: {
+          specialist: {
+            primary: {
+              provider: "anthropic",
+            },
+          },
+        },
+        registerTool,
+      }),
+    );
+
+    const checkAssumptions = getRegisteredTool(registerTool, "check_assumptions");
+    const result = await checkAssumptions?.execute?.("call-1", {
+      claim: "All remote teams lose velocity.",
+    });
+    expect(extractTextResult(result)).toBe("provider default model output");
+
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.anthropic.com/v1/messages");
+    const body = JSON.parse(String(init.body));
+    expect(body.model).toBe("claude-opus-4-6");
   });
 
   it("falls back to configured anthropic secondary when primary openai is unavailable", async () => {

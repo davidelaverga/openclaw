@@ -127,6 +127,15 @@ const DEFAULT_SPECIALIST_CONFIG: SpecialistConfig = {
   },
 };
 
+function getDefaultModelForProvider(provider: SpecialistProvider): string {
+  const candidates = [DEFAULT_SPECIALIST_CONFIG.primary, DEFAULT_SPECIALIST_CONFIG.fallback];
+  const matched = candidates.find((candidate) => candidate.provider === provider);
+  if (matched) {
+    return matched.model;
+  }
+  return DEFAULT_SPECIALIST_CONFIG.primary.model;
+}
+
 const SPECIALIST_PROMPTS = {
   check_assumptions: [
     "You are a rigorous epistemologist.",
@@ -229,9 +238,11 @@ function parseSpecialistEndpointConfig(
     return { ...fallback };
   }
   const provider = parseSpecialistProvider(record.provider, fallback.provider);
+  const modelFallback =
+    provider === fallback.provider ? fallback.model : getDefaultModelForProvider(provider);
   return {
     provider,
-    model: toStringOrDefault(record.model, fallback.model),
+    model: toStringOrDefault(record.model, modelFallback),
     timeoutMs: clampNumber(record.timeoutMs, fallback.timeoutMs, MIN_TIMEOUT_MS, MAX_TIMEOUT_MS),
     maxOutputTokens: clampNumber(
       record.maxOutputTokens,
@@ -1089,8 +1100,20 @@ export function createSophiaThinkingToolsPlugin(overrides: Partial<ThinkingTools
       api.on("llm_output", (event) => {
         sceneChainStateByRunId.delete(event.runId);
       });
+      api.on("agent_end", (event, ctx) => {
+        const eventRunId = toRecord(event)?.runId;
+        if (typeof eventRunId === "string" && eventRunId.trim().length > 0) {
+          sceneChainStateByRunId.delete(eventRunId);
+          return;
+        }
 
-      api.on("agent_end", (_event, ctx) => {
+        const ctxRunId = toRecord(ctx)?.runId;
+        if (typeof ctxRunId === "string" && ctxRunId.trim().length > 0) {
+          sceneChainStateByRunId.delete(ctxRunId);
+        }
+      });
+
+      api.on("session_end", (_event, ctx) => {
         if (!ctx.sessionId) {
           return;
         }
