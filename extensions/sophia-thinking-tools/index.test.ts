@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestPluginApi } from "../../test/helpers/extensions/plugin-api.js";
 import { createSophiaThinkingToolsPlugin } from "./index.js";
 
@@ -12,6 +12,9 @@ type RegisteredTool = {
 
 const tempDirs: string[] = [];
 const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
+let originalFetch: typeof globalThis.fetch = globalThis.fetch;
 
 async function makeTempDir(prefix: string): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -19,17 +22,31 @@ async function makeTempDir(prefix: string): Promise<string> {
   return dir;
 }
 
-function registeredHookByName(
+function getRegisteredHook(
   onMock: ReturnType<typeof vi.fn>,
   hookName: string,
-):
-  | ((event: { prompt: string; messages: unknown[] }, ctx: unknown) => Promise<unknown>)
-  | undefined {
+): ((event: unknown, ctx: unknown) => Promise<unknown> | unknown) | undefined {
   const entry = onMock.mock.calls.find((call) => call[0] === hookName);
-  return entry?.[1] as
-    | ((event: { prompt: string; messages: unknown[] }, ctx: unknown) => Promise<unknown>)
-    | undefined;
+  return entry?.[1] as ((event: unknown, ctx: unknown) => Promise<unknown> | unknown) | undefined;
 }
+
+function getRegisteredTool(
+  registerToolMock: ReturnType<typeof vi.fn>,
+  name: string,
+): RegisteredTool | undefined {
+  const tools = registerToolMock.mock.calls.map((call) => call[0] as RegisteredTool);
+  return tools.find((tool) => tool.name === name);
+}
+
+function extractTextResult(result: unknown): string {
+  const payload = result as { content?: Array<{ type?: string; text?: string }> } | undefined;
+  const first = payload?.content?.[0];
+  return typeof first?.text === "string" ? first.text : "";
+}
+
+beforeEach(() => {
+  originalFetch = globalThis.fetch;
+});
 
 afterEach(async () => {
   if (originalConfigPath === undefined) {
@@ -37,11 +54,25 @@ afterEach(async () => {
   } else {
     process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
   }
+
+  if (originalOpenAiKey === undefined) {
+    delete process.env.OPENAI_API_KEY;
+  } else {
+    process.env.OPENAI_API_KEY = originalOpenAiKey;
+  }
+
+  if (originalAnthropicKey === undefined) {
+    delete process.env.ANTHROPIC_API_KEY;
+  } else {
+    process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
+  }
+
+  globalThis.fetch = originalFetch;
   await Promise.all(tempDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
 });
 
 describe("sophia-thinking-tools plugin", () => {
-  it("registers seven tools and before_prompt_build hook", () => {
+  it("registers tools and lifecycle hooks", () => {
     const registerTool = vi.fn();
     const on = vi.fn();
     const plugin = createSophiaThinkingToolsPlugin({
@@ -82,7 +113,11 @@ describe("sophia-thinking-tools plugin", () => {
         "steelman",
       ].sort(),
     );
+
     expect(on).toHaveBeenCalledWith("before_prompt_build", expect.any(Function), { priority: 50 });
+    expect(on).toHaveBeenCalledWith("before_tool_call", expect.any(Function));
+    expect(on).toHaveBeenCalledWith("llm_output", expect.any(Function));
+    expect(on).toHaveBeenCalledWith("agent_end", expect.any(Function));
   });
 
   it("prefers workspace taxonomy over source taxonomy beside active config", async () => {
@@ -116,7 +151,7 @@ describe("sophia-thinking-tools plugin", () => {
       }),
     );
 
-    const hook = registeredHookByName(on, "before_prompt_build");
+    const hook = getRegisteredHook(on, "before_prompt_build");
     const result = await hook?.({ prompt: "hi", messages: [] }, {});
 
     expect(result).toEqual({ prependSystemContext: "workspace taxonomy" });
@@ -152,13 +187,16 @@ describe("sophia-thinking-tools plugin", () => {
       }),
     );
 
-    const hook = registeredHookByName(on, "before_prompt_build");
+    const hook = getRegisteredHook(on, "before_prompt_build");
     const result = await hook?.({ prompt: "hi", messages: [] }, {});
 
     expect(result).toEqual({ prependSystemContext: "source taxonomy only" });
   });
 
-  it("creates reasoning log entries with truncation defaults and full scene output", async () => {
+  it("creates reasoning log entries with specialist metadata and full scene output", async () => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+
     const workspaceDir = await makeTempDir("sophia-thinking-workspace-");
     const registerTool = vi.fn();
     const plugin = createSophiaThinkingToolsPlugin({
@@ -182,19 +220,25 @@ describe("sophia-thinking-tools plugin", () => {
       }),
     );
 
-    const registeredTools = registerTool.mock.calls.map((call) => call[0] as RegisteredTool);
-    const checkAssumptions = registeredTools.find((tool) => tool.name === "check_assumptions");
-    const inhabitScene = registeredTools.find((tool) => tool.name === "inhabit_scene");
+    const checkAssumptions = getRegisteredTool(registerTool, "check_assumptions");
+    const inhabitScene = getRegisteredTool(registerTool, "inhabit_scene");
 
     const longClaim = `${"A".repeat(260)}\n${"B".repeat(260)}`;
     await checkAssumptions?.execute?.("call-1", { claim: longClaim });
-    await inhabitScene?.execute?.("call-2", { context: "A difficult day at work" });
+    await inhabitScene?.execute?.("call-2", {
+      scene: "They are leaving a difficult team meeting feeling exposed.",
+      unspoken_weight: "Fear they are losing trust with peers.",
+      likely_need: "Grounding plus a concrete next step.",
+      tone_band_estimate: "Band 2 because stress is active and unresolved.",
+    });
 
     const logPath = path.join(workspaceDir, "memory", "reasoning_log.md");
     const logContent = await fs.readFile(logPath, "utf-8");
 
     expect(logContent).toContain("- **Tool:** check_assumptions");
     expect(logContent).toContain("- **Tool:** inhabit_scene");
+    expect(logContent).toContain("- **Specialist:** manual/manual-fallback (fallback)");
+    expect(logContent).toContain("- **DurationMs:** 0");
 
     const triggerMatch = logContent.match(
       /- \*\*Tool:\*\* check_assumptions[\s\S]*?- \*\*Trigger:\*\* (.*)/,
@@ -209,9 +253,201 @@ describe("sophia-thinking-tools plugin", () => {
     expect(outputMatch?.[1]).toBeDefined();
     expect(outputMatch?.[1]?.length).toBeLessThanOrEqual(500);
 
-    const inhabitSceneSectionStart = logContent.lastIndexOf("- **Tool:** inhabit_scene");
-    const inhabitSceneSection = logContent.slice(inhabitSceneSectionStart);
-    expect(inhabitSceneSection).toContain("- **Output:** Scene simulation for:");
-    expect(inhabitSceneSection).toContain("\nWhat their world looks like right now:\n");
+    const sceneSectionStart = logContent.lastIndexOf("- **Tool:** inhabit_scene");
+    const sceneSection = logContent.slice(sceneSectionStart);
+    expect(sceneSection).toContain("- **Output:** SCENE CONFIRMED");
+    expect(sceneSection).toContain("POST-SCENE EVALUATION");
+  });
+
+  it("enforces scene-tool order in before_tool_call and resets on llm_output", async () => {
+    const on = vi.fn();
+    const plugin = createSophiaThinkingToolsPlugin({
+      resolveStateDirFn: () => "/tmp/openclaw-state",
+    });
+
+    plugin.register?.(
+      createTestPluginApi({
+        id: "sophia-thinking-tools",
+        name: "Sophia Thinking Tools",
+        source: "test",
+        config: {} as never,
+        runtime: {} as never,
+        on,
+      }),
+    );
+
+    const beforeToolCall = getRegisteredHook(on, "before_tool_call");
+    const llmOutput = getRegisteredHook(on, "llm_output");
+    expect(beforeToolCall).toBeDefined();
+    expect(llmOutput).toBeDefined();
+
+    const blockedPerspective = await beforeToolCall?.(
+      { toolName: "perspective_shift", params: {}, runId: "run-1" },
+      { toolName: "perspective_shift", runId: "run-1", sessionId: "session-a" },
+    );
+    expect(blockedPerspective).toEqual({
+      block: true,
+      blockReason: "perspective_shift requires inhabit_scene first in the same run",
+    });
+
+    const blockedState = await beforeToolCall?.(
+      { toolName: "name_the_state", params: {}, runId: "run-2" },
+      { toolName: "name_the_state", runId: "run-2", sessionId: "session-a" },
+    );
+    expect(blockedState).toEqual({
+      block: true,
+      blockReason: "name_the_state requires inhabit_scene first in the same run",
+    });
+
+    const allowInhabit = await beforeToolCall?.(
+      { toolName: "inhabit_scene", params: {}, runId: "run-3" },
+      { toolName: "inhabit_scene", runId: "run-3", sessionId: "session-a" },
+    );
+    expect(allowInhabit).toBeUndefined();
+
+    const allowPerspective = await beforeToolCall?.(
+      { toolName: "perspective_shift", params: {}, runId: "run-3" },
+      { toolName: "perspective_shift", runId: "run-3", sessionId: "session-a" },
+    );
+    expect(allowPerspective).toBeUndefined();
+
+    const allowState = await beforeToolCall?.(
+      { toolName: "name_the_state", params: {}, runId: "run-3" },
+      { toolName: "name_the_state", runId: "run-3", sessionId: "session-a" },
+    );
+    expect(allowState).toBeUndefined();
+
+    await llmOutput?.({ runId: "run-3" }, {});
+
+    const blockedAfterReset = await beforeToolCall?.(
+      { toolName: "name_the_state", params: {}, runId: "run-3" },
+      { toolName: "name_the_state", runId: "run-3", sessionId: "session-a" },
+    );
+    expect(blockedAfterReset).toEqual({
+      block: true,
+      blockReason: "name_the_state requires inhabit_scene first in the same run",
+    });
+  });
+
+  it("uses configured anthropic primary specialist settings", async () => {
+    delete process.env.OPENAI_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "anthropic-test-key";
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          content: [{ type: "text", text: "configured anthropic primary output" }],
+        }),
+        { status: 200 },
+      ),
+    ) as unknown as typeof globalThis.fetch;
+
+    const registerTool = vi.fn();
+    const plugin = createSophiaThinkingToolsPlugin({
+      resolveStateDirFn: () => "/tmp/openclaw-state",
+    });
+
+    plugin.register?.(
+      createTestPluginApi({
+        id: "sophia-thinking-tools",
+        name: "Sophia Thinking Tools",
+        source: "test",
+        config: {} as never,
+        runtime: {} as never,
+        pluginConfig: {
+          specialist: {
+            primary: {
+              provider: "anthropic",
+              model: "claude-custom-primary",
+              timeoutMs: 9000,
+              maxOutputTokens: 333,
+            },
+            fallback: {
+              provider: "openai",
+              model: "gpt-fallback",
+              reasoningEffort: "medium",
+              timeoutMs: 4000,
+              maxOutputTokens: 120,
+            },
+          },
+        },
+        registerTool,
+      }),
+    );
+
+    const steelman = getRegisteredTool(registerTool, "steelman");
+    const result = await steelman?.execute?.("call-1", {
+      position: "Remote-first teams are less productive.",
+    });
+    expect(extractTextResult(result)).toBe("configured anthropic primary output");
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.anthropic.com/v1/messages");
+
+    const body = JSON.parse(String(init.body));
+    expect(body.model).toBe("claude-custom-primary");
+    expect(body.max_tokens).toBe(333);
+  });
+
+  it("falls back to configured anthropic secondary when primary openai is unavailable", async () => {
+    delete process.env.OPENAI_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "anthropic-fallback-key";
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          content: [{ type: "text", text: "fallback anthropic output" }],
+        }),
+        { status: 200 },
+      ),
+    ) as unknown as typeof globalThis.fetch;
+
+    const registerTool = vi.fn();
+    const plugin = createSophiaThinkingToolsPlugin({
+      resolveStateDirFn: () => "/tmp/openclaw-state",
+    });
+
+    plugin.register?.(
+      createTestPluginApi({
+        id: "sophia-thinking-tools",
+        name: "Sophia Thinking Tools",
+        source: "test",
+        config: {} as never,
+        runtime: {} as never,
+        pluginConfig: {
+          specialist: {
+            primary: {
+              provider: "openai",
+              model: "gpt-custom-primary",
+              reasoningEffort: "high",
+              timeoutMs: 9000,
+              maxOutputTokens: 333,
+            },
+            fallback: {
+              provider: "anthropic",
+              model: "claude-custom-fallback",
+              timeoutMs: 7000,
+              maxOutputTokens: 280,
+            },
+          },
+        },
+        registerTool,
+      }),
+    );
+
+    const decomposeClaim = getRegisteredTool(registerTool, "decompose_claim");
+    const result = await decomposeClaim?.execute?.("call-2", {
+      claim: "AI makes all teams faster.",
+    });
+    expect(extractTextResult(result)).toBe("fallback anthropic output");
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.anthropic.com/v1/messages");
+
+    const body = JSON.parse(String(init.body));
+    expect(body.model).toBe("claude-custom-fallback");
+    expect(body.max_tokens).toBe(280);
   });
 });

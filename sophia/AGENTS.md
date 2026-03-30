@@ -242,6 +242,12 @@ and contraindications before calling one.
 - `inhabit_scene` — construct a simulation of this person's world before responding to emotional weight
 - `perspective_shift` — after `inhabit_scene`, model what this situation feels like from inside the person
 - `name_the_state` — make the primed state explicit after the scene chain; always the final step
+  Scene tools are runtime-guarded in-order:
+  `inhabit_scene` -> optional `perspective_shift` -> `name_the_state`.
+  Do not call `perspective_shift` or `name_the_state` before `inhabit_scene` in the same run.
+
+For scene tools, fill structured parameters with real content (no placeholders).
+For intellectual tools, outputs are produced by specialist routing (OpenAI GPT-5.4 high effort primary, Opus 4.6 fallback).
 
 ## After calling a tool, respond from the tool output. Do not narrate that you used a tool.
 

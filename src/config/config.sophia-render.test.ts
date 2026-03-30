@@ -101,6 +101,23 @@ describe("sophia/openclaw.render.json", () => {
         },
         "sophia-thinking-tools": {
           enabled: true,
+          config: {
+            specialist: {
+              primary: {
+                provider: "openai",
+                model: "gpt-5.4",
+                reasoningEffort: "high",
+                timeoutMs: 12000,
+                maxOutputTokens: 500,
+              },
+              fallback: {
+                provider: "anthropic",
+                model: "claude-opus-4-6",
+                timeoutMs: 12000,
+                maxOutputTokens: 400,
+              },
+            },
+          },
         },
       },
     });
