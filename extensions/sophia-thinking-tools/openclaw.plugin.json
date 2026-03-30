@@ -1,0 +1,11 @@
+{
+  "id": "sophia-thinking-tools",
+  "name": "Sophia Thinking Tools",
+  "description": "Intellectual and emotional reasoning tools for Sophia with deterministic taxonomy injection and reasoning-log capture.",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

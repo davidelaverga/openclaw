@@ -1,0 +1,12 @@
+{
+  "name": "@openclaw/sophia-thinking-tools",
+  "version": "2026.3.14",
+  "private": true,
+  "description": "OpenClaw Sophia reasoning tools plugin",
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

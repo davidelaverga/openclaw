@@ -71,6 +71,21 @@ describe("sophia/openclaw.render.json", () => {
       entries: {
         "prompt-observer": {
           enabled: true,
+          config: {
+            toolNames: [
+              "memory_search",
+              "memory_get",
+              "web_search",
+              "web_fetch",
+              "check_assumptions",
+              "steelman",
+              "find_analogy",
+              "decompose_claim",
+              "inhabit_scene",
+              "perspective_shift",
+              "name_the_state",
+            ],
+          },
         },
         "sophia-document": {
           enabled: true,
@@ -83,6 +98,9 @@ describe("sophia/openclaw.render.json", () => {
             alwaysParseExtensions: [".ppt", ".pptx", ".xls", ".xlsx"],
             fallbackParseExtensions: [".pdf", ".doc", ".docx"],
           },
+        },
+        "sophia-thinking-tools": {
+          enabled: true,
         },
       },
     });
