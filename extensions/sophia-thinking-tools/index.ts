@@ -2,7 +2,11 @@ import { existsSync } from "node:fs";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
-import { definePluginEntry, type OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import {
+  definePluginEntry,
+  type OpenClawPluginApi,
+  type OpenClawPluginConfigSchema,
+} from "openclaw/plugin-sdk/plugin-entry";
 import { resolveStateDir } from "openclaw/plugin-sdk/state-paths";
 
 const TAXONOMY_FILENAME = "thinking_tools_taxonomy.md";
@@ -127,6 +131,56 @@ const DEFAULT_SPECIALIST_CONFIG: SpecialistConfig = {
   },
 };
 
+const SOPHIA_THINKING_TOOLS_CONFIG_SCHEMA: OpenClawPluginConfigSchema = {
+  jsonSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      specialist: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          primary: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              provider: { type: "string", enum: ["openai", "anthropic"] },
+              model: { type: "string", minLength: 1 },
+              timeoutMs: { type: "integer", minimum: MIN_TIMEOUT_MS, maximum: MAX_TIMEOUT_MS },
+              maxOutputTokens: {
+                type: "integer",
+                minimum: MIN_MAX_OUTPUT_TOKENS,
+                maximum: MAX_MAX_OUTPUT_TOKENS,
+              },
+              reasoningEffort: {
+                type: "string",
+                enum: ["none", "minimal", "low", "medium", "high", "xhigh"],
+              },
+            },
+          },
+          fallback: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              provider: { type: "string", enum: ["openai", "anthropic"] },
+              model: { type: "string", minLength: 1 },
+              timeoutMs: { type: "integer", minimum: MIN_TIMEOUT_MS, maximum: MAX_TIMEOUT_MS },
+              maxOutputTokens: {
+                type: "integer",
+                minimum: MIN_MAX_OUTPUT_TOKENS,
+                maximum: MAX_MAX_OUTPUT_TOKENS,
+              },
+              reasoningEffort: {
+                type: "string",
+                enum: ["none", "minimal", "low", "medium", "high", "xhigh"],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
 function getDefaultModelForProvider(provider: SpecialistProvider): string {
   const candidates = [DEFAULT_SPECIALIST_CONFIG.primary, DEFAULT_SPECIALIST_CONFIG.fallback];
   const matched = candidates.find((candidate) => candidate.provider === provider);
@@ -1030,6 +1084,7 @@ export function createSophiaThinkingToolsPlugin(overrides: Partial<ThinkingTools
     id: "sophia-thinking-tools",
     name: "Sophia Thinking Tools",
     description: "Reasoning tools and taxonomy injection for Sophia.",
+    configSchema: SOPHIA_THINKING_TOOLS_CONFIG_SCHEMA,
     register(api) {
       const specialistConfig = resolveSpecialistConfig(api.pluginConfig);
       const logger = api.logger ?? NOOP_LOGGER;

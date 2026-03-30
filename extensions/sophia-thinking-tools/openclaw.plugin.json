@@ -6,6 +6,69 @@
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
-    "properties": {}
+    "properties": {
+      "specialist": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "primary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": ["openai", "anthropic"]
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 60000
+              },
+              "maxOutputTokens": {
+                "type": "integer",
+                "minimum": 64,
+                "maximum": 4000
+              },
+              "reasoningEffort": {
+                "type": "string",
+                "enum": ["none", "minimal", "low", "medium", "high", "xhigh"]
+              }
+            }
+          },
+          "fallback": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": ["openai", "anthropic"]
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 60000
+              },
+              "maxOutputTokens": {
+                "type": "integer",
+                "minimum": 64,
+                "maximum": 4000
+              },
+              "reasoningEffort": {
+                "type": "string",
+                "enum": ["none", "minimal", "low", "medium", "high", "xhigh"]
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

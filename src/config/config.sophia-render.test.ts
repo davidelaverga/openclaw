@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { validateConfigObject } from "./config.js";
+import { validateConfigObject, validateConfigObjectWithPlugins } from "./config.js";
 
 describe("sophia/openclaw.render.json", () => {
   it("keeps the Sophia Render config valid", () => {
@@ -124,5 +124,8 @@ describe("sophia/openclaw.render.json", () => {
 
     const result = validateConfigObject(raw);
     expect(result.ok).toBe(true);
+
+    const pluginAwareResult = validateConfigObjectWithPlugins(raw);
+    expect(pluginAwareResult.ok).toBe(true);
   });
 });
