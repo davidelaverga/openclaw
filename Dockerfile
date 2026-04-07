@@ -12,6 +12,7 @@
 # Two runtime variants:
 #   Default (bookworm):      docker build .
 #   Slim (bookworm-slim):    docker build --build-arg OPENCLAW_VARIANT=slim .
+# Cache-bust: 2026-04-07
 ARG OPENCLAW_EXTENSIONS="discord whatsapp elevenlabs deepgram anthropic media-understanding-core memory-core speech-core"
 ARG OPENCLAW_VARIANT=default
 ARG OPENCLAW_BUNDLED_PLUGIN_DIR=extensions
