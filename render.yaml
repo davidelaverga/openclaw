@@ -10,7 +10,9 @@ services:
       - key: OPENCLAW_STATE_DIR
         value: /data/.openclaw
       - key: OPENCLAW_WORKSPACE_DIR
-        value: /data/workspace
+        value: /data/.openclaw/sophia
+      - key: OPENCLAW_CONFIG_PATH
+        value: /data/.openclaw/openclaw.json
       - key: OPENCLAW_GATEWAY_TOKEN
         generateValue: true
     disk:

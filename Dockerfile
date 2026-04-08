@@ -269,8 +269,10 @@ HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
 # Shell form CMD so Render's Docker Command override (if any) can use shell
 # features. The default seeds a minimal config for non-loopback bind support,
 # then starts the gateway.
-CMD mkdir -p "${OPENCLAW_STATE_DIR:-/data/.openclaw}" && \
-    test -f "${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}" || \
-    echo '{"gateway":{"mode":"local","controlUi":{"dangerouslyAllowHostHeaderOriginFallback":true}}}' \
-      > "${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}" && \
+CMD set -e; \
+    cfg="${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}"; \
+    mkdir -p "$(dirname "$cfg")"; \
+    if [ ! -f "$cfg" ]; then \
+      echo '{"gateway":{"mode":"local","controlUi":{"dangerouslyAllowHostHeaderOriginFallback":true}}}' > "$cfg"; \
+    fi; \
     exec node openclaw.mjs gateway --bind lan --port "${OPENCLAW_GATEWAY_PORT:-8080}" --allow-unconfigured
