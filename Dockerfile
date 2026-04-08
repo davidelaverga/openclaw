@@ -273,4 +273,4 @@ CMD mkdir -p "${OPENCLAW_STATE_DIR:-/data/.openclaw}" && \
     test -f "${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}" || \
     echo '{"gateway":{"mode":"local","controlUi":{"dangerouslyAllowHostHeaderOriginFallback":true}}}' \
       > "${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}" && \
-    exec node openclaw.mjs gateway --allow-unconfigured
+    exec node openclaw.mjs gateway --bind lan --port "${OPENCLAW_GATEWAY_PORT:-8080}" --allow-unconfigured
