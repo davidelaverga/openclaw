@@ -266,4 +266,11 @@ USER node
 # For external access from host/ingress, override bind to "lan" and set auth.
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
+# Shell form CMD so Render's Docker Command override (if any) can use shell
+# features. The default seeds a minimal config for non-loopback bind support,
+# then starts the gateway.
+CMD mkdir -p "${OPENCLAW_STATE_DIR:-/data/.openclaw}" && \
+    test -f "${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}" || \
+    echo '{"gateway":{"mode":"local","controlUi":{"dangerouslyAllowHostHeaderOriginFallback":true}}}' \
+      > "${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}" && \
+    exec node openclaw.mjs gateway --allow-unconfigured
