@@ -80,4 +80,15 @@ describe("Dockerfile", () => {
       'corepack prepare "$(node -p "require(\'./package.json\').packageManager")" --activate',
     );
   });
+
+  it("copies the runtime bootstrap helper and probes the configured gateway port", async () => {
+    const dockerfile = await readFile(dockerfilePath, "utf8");
+    expect(dockerfile).toContain(
+      "COPY --from=runtime-assets --chown=node:node /app/scripts/docker/runtime-bootstrap-config.mjs ./scripts/docker/runtime-bootstrap-config.mjs",
+    );
+    expect(dockerfile).toContain(
+      "const port=process.env.OPENCLAW_GATEWAY_PORT||'8080';fetch('http://127.0.0.1:'+port+'/healthz')",
+    );
+    expect(dockerfile).toContain("node ./scripts/docker/runtime-bootstrap-config.mjs; \\");
+  });
 });

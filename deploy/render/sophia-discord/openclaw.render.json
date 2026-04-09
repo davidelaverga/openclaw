@@ -1,18 +1,8 @@
-// Sophia Discord + WhatsApp — Render gateway config template
-// Copy to /data/.openclaw/openclaw.json on Render persistent disk.
-// Secrets (API keys, tokens) are resolved from Render env vars at runtime.
-//
-// Discord IDs (Sophia server):
-//   Guild: 1397938267961430097
-//   Voice channel (Sophia Voice): 1397938269219586225
 {
   "agents": {
     "defaults": {
       "model": {
         "primary": "anthropic/claude-sonnet-4-6"
-      },
-      "models": {
-        "anthropic/claude-sonnet-4-6": {}
       },
       "workspace": "/data/.openclaw/sophia",
       "memorySearch": {
@@ -48,12 +38,10 @@
       }
     ]
   },
-
   "tools": {
     "web": {
       "search": {
-        "enabled": true,
-        "provider": "brave"
+        "enabled": true
       },
       "fetch": {
         "enabled": true
@@ -62,7 +50,12 @@
     "media": {
       "audio": {
         "enabled": true,
-        "models": [{ "provider": "deepgram", "model": "nova-3" }],
+        "models": [
+          {
+            "provider": "deepgram",
+            "model": "nova-3"
+          }
+        ],
         "providerOptions": {
           "deepgram": {
             "detect_language": true,
@@ -73,49 +66,30 @@
       }
     }
   },
-
   "commands": {
     "native": "auto",
     "nativeSkills": "auto",
     "restart": true,
     "ownerDisplay": "raw"
   },
-
   "cron": {
     "enabled": true
   },
-
-  "hooks": {
-    "internal": {
-      "enabled": true,
-      "entries": {
-        "bootstrap-extra-files": {
-          "enabled": true,
-          "paths": [
-            "tone_skills.md",
-            "thinking_tools_taxonomy.md"
-          ]
-        }
-      }
+  "gateway": {
+    "mode": "local",
+    "controlUi": {
+      "dangerouslyAllowHostHeaderOriginFallback": true
     }
   },
-
-  // --- Channels ---
-
   "channels": {
-    // WhatsApp — preserved from existing config
     "whatsapp": {
       "enabled": true,
       "dmPolicy": "pairing",
-      "allowFrom": [
-        "+393519168570"
-      ],
+      "allowFrom": ["+15555550123"],
       "groupPolicy": "allowlist",
       "debounceMs": 0,
       "mediaMaxMb": 50
     },
-
-    // Discord — new
     "discord": {
       "enabled": true,
       "groupPolicy": "allowlist",
@@ -157,14 +131,11 @@
       "eventQueue": {
         "listenerTimeout": 120000
       },
-      "nativeCommands": {
-        "enabled": true
+      "commands": {
+        "native": true
       }
     }
   },
-
-  // --- TTS (global, also used by WhatsApp voice notes) ---
-
   "messages": {
     "tts": {
       "auto": "off",
@@ -184,24 +155,6 @@
       }
     }
   },
-
-  // --- Plugins ---
-
-  "plugins": {
-    "entries": {
-      "brave": {
-        "config": {
-          "webSearch": {
-            "mode": "llm-context"
-          }
-        },
-        "enabled": true
-      }
-    }
-  },
-
-  // --- Talk (legacy TTS path, kept for compatibility) ---
-
   "talk": {
     "provider": "elevenlabs",
     "providers": {

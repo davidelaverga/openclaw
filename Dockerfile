@@ -161,6 +161,7 @@ COPY --from=runtime-assets --chown=node:node /app/${OPENCLAW_BUNDLED_PLUGIN_DIR}
 COPY --from=runtime-assets --chown=node:node /app/skills ./skills
 COPY --from=runtime-assets --chown=node:node /app/docs ./docs
 COPY --from=runtime-assets --chown=node:node /app/qa ./qa
+COPY --from=runtime-assets --chown=node:node /app/scripts/docker/runtime-bootstrap-config.mjs ./scripts/docker/runtime-bootstrap-config.mjs
 
 # In npm-installed Docker images, prefer the copied source extension tree for
 # bundled discovery so package metadata that points at source entries stays valid.
@@ -265,17 +266,10 @@ USER node
 #   - aliases: /health and /ready
 # For external access from host/ingress, override bind to "lan" and set auth.
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "const port=process.env.OPENCLAW_GATEWAY_PORT||'8080';fetch('http://127.0.0.1:'+port+'/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 # Shell form CMD so Render's Docker Command override (if any) can use shell
-# features. The default seeds a minimal config for non-loopback bind support,
+# features. The default normalizes runtime config for non-loopback bind support,
 # then starts the gateway.
 CMD set -e; \
-    cfg="${OPENCLAW_CONFIG_PATH:-${OPENCLAW_STATE_DIR:-/data/.openclaw}/openclaw.json}"; \
-    mkdir -p "$(dirname "$cfg")"; \
-    if [ ! -f "$cfg" ]; then \
-      echo '{"gateway":{"mode":"local","controlUi":{"dangerouslyAllowHostHeaderOriginFallback":true}}}' > "$cfg"; \
-    fi; \
-    if [ -f "$cfg" ]; then \
-      node -e "const f='$cfg',c=JSON.parse(require('fs').readFileSync(f,'utf8'));if(c.plugins){delete c.plugins;require('fs').writeFileSync(f,JSON.stringify(c,null,2));console.log('[bootstrap] removed invalid plugins key from config')}"; \
-    fi; \
+    node ./scripts/docker/runtime-bootstrap-config.mjs; \
     exec node openclaw.mjs gateway --bind lan --port "${OPENCLAW_GATEWAY_PORT:-8080}" --allow-unconfigured

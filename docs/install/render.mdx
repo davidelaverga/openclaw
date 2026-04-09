@@ -6,7 +6,7 @@ read_when:
 title: "Render"
 ---
 
-Deploy OpenClaw on Render using Infrastructure as Code. The included `render.yaml` Blueprint defines your entire stack declaratively, service, disk, environment variables, so you can deploy with a single click and version your infrastructure alongside your code.
+Deploy OpenClaw on Render using Infrastructure as Code. The repo-root `render.yaml` Blueprint defines the supported Render service, disk, and environment contract so you can deploy with a single click and version your infrastructure alongside your code.
 
 ## Prerequisites
 
@@ -26,8 +26,7 @@ Once deployed, your service URL follows the pattern `https://<service-name>.onre
 
 ## Understanding the Blueprint
 
-Render Blueprints are YAML files that define your infrastructure. The `render.yaml` in this
-repository configures everything needed to run OpenClaw:
+Render Blueprints are YAML files that define your infrastructure. The repo-root `render.yaml` in this repository configures everything needed to run OpenClaw:
 
 ```yaml
 services:
@@ -59,6 +58,8 @@ Key Blueprint features used:
 | `healthCheckPath`     | Render monitors `/health` and restarts unhealthy instances |
 | `generateValue: true` | Auto-generates a cryptographically secure value            |
 | `disk`                | Persistent storage that survives redeploys                 |
+
+The root blueprint is the canonical deployment source for this repo. If you keep any deployment-specific recovery templates in your fork, treat them as manual recovery artifacts only, not as additional active Blueprints.
 
 ## Choosing a plan
 
@@ -101,6 +102,8 @@ For debugging, open a shell session via **Dashboard → your service → Shell**
 
 Modify variables in **Dashboard → your service → Environment**. Changes trigger an automatic redeploy.
 
+For Docker services, Render exposes service environment variables at both build time and runtime. That means Docker build args such as `OPENCLAW_DOCKER_APT_PACKAGES` and `OPENCLAW_EXTENSIONS` can be driven from the same service environment when you intentionally need them. See [Docker on Render](https://render.com/docs/docker) and [Default Environment Variables](https://render.com/docs/environment-variables).
+
 ### Auto-deploy
 
 If you use the original OpenClaw repository, Render will not auto-deploy your OpenClaw. To update it, run a manual Blueprint sync from the dashboard.
@@ -141,6 +144,7 @@ Check the deploy logs in the Render Dashboard. Common issues:
 
 - Missing `OPENCLAW_GATEWAY_TOKEN` — verify it is set in **Dashboard → Environment**
 - Port mismatch — ensure `OPENCLAW_GATEWAY_PORT=8080` is set so the gateway binds to the port Render expects
+- Persisted config drift — inspect `$OPENCLAW_CONFIG_PATH` on the mounted disk first, especially after older manual JSON5/template-based deploys
 
 ### Slow cold starts (free tier)
 

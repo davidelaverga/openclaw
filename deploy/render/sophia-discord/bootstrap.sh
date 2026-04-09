@@ -5,7 +5,8 @@
 # no config file exists. Does NOT touch workspace, credentials, memory DB,
 # or any other existing state.
 #
-# Usage: run once via Render Shell, or add to a Docker entrypoint wrapper.
+# Usage: run once via Render Shell after deploying with the repo-root
+# render.yaml blueprint.
 #   bash /app/deploy/render/sophia-discord/bootstrap.sh
 
 set -euo pipefail
@@ -13,7 +14,7 @@ set -euo pipefail
 CONFIG_DIR="${OPENCLAW_STATE_DIR:-/data/.openclaw}"
 CONFIG_FILE="${OPENCLAW_CONFIG_PATH:-$CONFIG_DIR/openclaw.json}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/openclaw.render.json5"
+TEMPLATE="$SCRIPT_DIR/openclaw.render.json"
 
 # Ensure state directory exists
 mkdir -p "$CONFIG_DIR"
@@ -27,7 +28,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
   fi
 
-  # openclaw reads JSON5 natively; copy the template as-is
+  # The canonical seed is plain JSON so both OpenClaw and runtime bootstrap
+  # helpers can read it safely.
   cp "$TEMPLATE" "$CONFIG_FILE"
   echo "[bootstrap] Config deployed to $CONFIG_FILE"
 else
