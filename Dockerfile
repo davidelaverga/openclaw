@@ -275,4 +275,7 @@ CMD set -e; \
     if [ ! -f "$cfg" ]; then \
       echo '{"gateway":{"mode":"local","controlUi":{"dangerouslyAllowHostHeaderOriginFallback":true}}}' > "$cfg"; \
     fi; \
+    if [ -f "$cfg" ]; then \
+      node -e "const f='$cfg',c=JSON.parse(require('fs').readFileSync(f,'utf8'));if(c.plugins){delete c.plugins;require('fs').writeFileSync(f,JSON.stringify(c,null,2));console.log('[bootstrap] removed invalid plugins key from config')}"; \
+    fi; \
     exec node openclaw.mjs gateway --bind lan --port "${OPENCLAW_GATEWAY_PORT:-8080}" --allow-unconfigured
